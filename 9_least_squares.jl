@@ -1,5 +1,6 @@
 using LinearAlgebra
 using Random
+using PyPlot
 
 function generate_data(m)
     a = rand(m)
@@ -11,7 +12,7 @@ function solve_least_squares(a,b)
     A = [ones(length(a)) a]
     Q,R = qr(A)
     return R\Matrix(Q)'*b
-    # Simpler: return A\b
+    # Simpler and faster: return A\b
 end
 
 function example()
