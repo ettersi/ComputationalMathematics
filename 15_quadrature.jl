@@ -2,7 +2,7 @@ using PyPlot
 using LaTeXStrings
 using FastGaussQuadrature
 
-function newton_cotes(f,n)
+function newton_cotes(n)
     x = LinRange(-1,1,n)
     w = quadweights(x)
     return x,w
