@@ -46,7 +46,6 @@ function example_explicit()
         plot(t, [ỹ[i][1] for i = 1:m], label="m = $m")
     end
     ylims = ylim()
-    @show ylims
     ylim(clamp.(ylims, -2.4,2.4))
     legend(loc="best")
 end
