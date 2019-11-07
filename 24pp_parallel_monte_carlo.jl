@@ -1,5 +1,4 @@
 using Random
-using RandomNumbers.PCG
 
 #############
 # Sum example

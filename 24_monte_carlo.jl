@@ -82,13 +82,13 @@ function error_estimation()
     M = 1000
 
     F = f.(rand(M,N))
-    μ = mean(F,dims=2)
+    Q = mean(F,dims=2)
     σ = std(F)
 
-    println("Empirical root-mean-square error: ", sqrt(mean((μ.-I).^2)))
+    println("Empirical root-mean-square error: ", sqrt(mean((Q.-I).^2)))
     println("Expected root-mean-square error: ", σ/sqrt(N))
     println()
-    println("Empirical ratio of estimates inside one sigma confidence interval: ", sum(abs.(μ.-I) .< σ/sqrt(N))/M)
+    println("Empirical ratio of estimates inside one sigma confidence interval: ", sum(abs.(Q.-I) .< σ/sqrt(N))/M)
     println("Expected ratio of estimates inside one sigma confidence interval: ", erf(sqrt(0.5)))
 end
 

@@ -8,8 +8,8 @@ function generate_samples(n,Δx)
     x1 = zeros(n)
     x2 = zeros(n)
     for i = 1:n-1
-        x̃2 = x2[i] + Δx*randn()
         x̃1 = x1[i] + Δx*randn()
+        x̃2 = x2[i] + Δx*randn()
         R = gfun(x̃1,x̃2) / gfun(x1[i],x2[i])
         if rand() <= R
             x1[i+1] = x̃1
