@@ -1,6 +1,3 @@
-using BenchmarkTools
-using LinearAlgebra
-
 function integers()
     println(bitstring(0)[end-4:end]) # -> "00000"
     println(bitstring(1)[end-4:end]) # -> "00001"
