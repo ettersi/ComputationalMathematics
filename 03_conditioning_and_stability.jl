@@ -35,12 +35,12 @@ end
 
 function condition_number()
     f = sin; df = cos
-    x = 1.0; dx = 1e-8
+    x = 1.0; x̃ = x + 1e-8
 
-    exact_relative_error = abs( ( f(x+dx) - f(x) ) / f(x) )
+    exact_relative_error = abs( ( f(x̃) - f(x) ) / f(x) )
 
     κ = abs( df(x)*x / f(x) )
-    estimated_relative_error = κ * abs( dx / x )
+    estimated_relative_error = κ * abs( (x̃ - x) / x )
 
     println("    Exact relative error: ", exact_relative_error)
     println("Estimated relative error: ", estimated_relative_error)
