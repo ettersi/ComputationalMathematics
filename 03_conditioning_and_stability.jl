@@ -54,7 +54,7 @@ function stability()
         ("unstable", x -> sqrt(1 + x) - 1),
         (  "stable", x -> x / (sqrt(1+x) + 1))
     )
-        relative_error = @. abs(f(x) .- f(big(x))) / abs(f(big(x)))
+        relative_error = @. Float64(abs(f(x) .- f(big(x))) / abs(f(big(x))))
         loglog(x, relative_error; label=label)
     end
     xlabel(L"x")
