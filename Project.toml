@@ -2,3 +2,4 @@
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
