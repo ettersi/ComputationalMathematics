@@ -11,6 +11,7 @@ function lagrange(x,j,xx)
         for i = 1:length(x) if i != j
     )
 end
+
 function interpolate(x,f,xx)
     #  x : interpolation points
     #  f : interpolation values
@@ -27,6 +28,12 @@ function lagrange_example()
     plot(xx, interpolate.(Ref(x),Ref(f),xx))
     plot(x,f, "ko", ms = 4)
     display(gcf())
+
+    # `Ref(x)` excludes `x` from the broadcasting implied by `.`.
+    # The following commands illustrate the difference:
+    #   foo(x,y) = println(x," ",y)
+    #   foo.(1:2,3:4)
+    #   foo.(1:2, Ref(3:4))
 end
 
 function piecewise_interpolation_example()
