@@ -177,11 +177,11 @@ end
 # Helper functions
 
 chebyshev_points(n) = cos.(LinRange(0,π,2n+1)[2:2:end-1])
-function sample_chebyshev_interpolant(f,n,k=10)
+function sample_chebyshev_interpolant(f,n,nn)
     # Input:
     #    f : function to interpolate
     #    n : number of interpolation points
-    #    k : Oversampling rate
+    #   nn : number of evaluation points
     #
     # Output:
     #   xx : evaluation points of the interpolant
@@ -195,7 +195,6 @@ function sample_chebyshev_interpolant(f,n,k=10)
     x = chebyshev_points(n)
     c = FFTW.r2r(f.(x),FFTW.REDFT10)./(2n)
 
-    nn = k*n
     xx = chebyshev_points(nn)
     pxx = FFTW.r2r([c; zeros(nn-n)], FFTW.REDFT01)
 
@@ -203,7 +202,7 @@ function sample_chebyshev_interpolant(f,n,k=10)
 end
 
 function chebyshev_interpolation_error(f,n)
-    xx,pxx = sample_chebyshev_interpolant(f,n)
+    xx,pxx = sample_chebyshev_interpolant(f,n, 10*n)
     return norm(pxx .- f.(xx), Inf)
 end
 
@@ -213,7 +212,7 @@ function convergence_abs()
     errors = chebyshev_interpolation_error.(f,n)
 
     clf()
-    loglog(n, errors, "-o", ms=2)
+    loglog(n, errors, "-o", ms=3)
     nn = (8,n[end])
     loglog(nn, 1.2.*nn.^-1,"k--")
     xlabel(L"n")
@@ -227,7 +226,7 @@ function convergence_abssin3()
     errors = chebyshev_interpolation_error.(f,n)
 
     clf()
-    loglog(n, errors, "-o", ms=2)
+    loglog(n, errors, "-o", ms=3)
     nn = (2^4.5,n[end])
     loglog(nn, 1e4.*nn.^-3,"k--")
     xlabel(L"n")
@@ -241,7 +240,7 @@ function plot_abssin3()
     # n = 64
     x = chebyshev_points(n)
     f = x -> abs(sin(4π*x))^3
-    xx,pxx = sample_chebyshev_interpolant(f,n, 2^10÷n)
+    xx,pxx = sample_chebyshev_interpolant(f,n, 2^10)
 
     clf()
     plot(xx, f.(xx), "k", lw=0.5, label=L"f(x)")
@@ -259,9 +258,9 @@ function convergence_expinvx()
 
     clf()
     if true
-        loglog(n, errors, "-o", ms=2)
+        loglog(n, errors, "-o", ms=3)
     else
-        semilogy(n, errors, "-o", ms=2)
+        semilogy(n, errors, "-o", ms=3)
     end
     xlabel(L"n")
     ylabel(L"\|f - p\|_{[-1,1]}")
@@ -283,19 +282,20 @@ end
 function convergence_runge()
     n = 1:100
     a = (4,25)
-    c = ("C0", "C1")
+    c = ("C0", "C2")
     s = (0.25,8)
     nn = ((1,70), (5,100))
 
     clf()
     for (a,c,s,nn) in zip(a,c,s,nn)
         f = x -> inv(1 + a*x^2)
-            r = BernsteinEllipses.radius(im/sqrt(a))
+        r = BernsteinEllipses.radius(im/sqrt(a))
         errors = chebyshev_interpolation_error.(f,n)
-        semilogy(n, errors, "$c-o", ms=2)
-        semilogy(nn, s.*r.^.-nn, "$c--")
+        semilogy(n, errors, "$c-", label=latexstring("\\frac{1}{1 + $a x^2}"))
+        semilogy(nn, s.*r.^.-nn, "$c--", label=latexstring("O(|\\phi^{-1}($(1/sqrt(a)) i)|^{-n})"))
     end
     xlabel(L"n")
     ylabel(L"\|f - p\|_{[-1,1]}")
+    legend(frameon=false)
     display(gcf())
 end
