@@ -70,7 +70,6 @@ end
 function chebyshev_error_abs()
     n = 100
     f = x->abs(x)
-    x = chebyshev_points(n)
     xx,pxx = sample_chebyshev_interpolant(f,n,1024)
 
     clf()
