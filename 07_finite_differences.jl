@@ -70,7 +70,7 @@ end
 
 function example_2d()
     f = (x1,x2)->x1*x2
-    u = solve_poisson_2d(f,300)
+    x,u = solve_poisson_2d(f,300)
 
     clf()
     imshow(u, extent=(0,1,0,1), origin="bottom left")
