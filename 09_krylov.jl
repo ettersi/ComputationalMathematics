@@ -82,7 +82,7 @@ function example()
     c,d = 1,2   # Interval of eigenvalues
 
     # Assemble and solve linear system
-    λ = LinRange(Sa,Sb,n)
+    λ = LinRange(c,d,n)
     A = Diagonal(λ)
     b = ones(n)
     pAb = solve(A,b,m,c,d)
