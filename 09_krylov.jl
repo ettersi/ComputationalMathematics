@@ -1,7 +1,8 @@
 using PyPlot
 using LinearAlgebra
 using FFTW
-using BernsteinEllipses
+using IterativeSolvers
+using Random
 
 chebyshev_points(n) = cos.(LinRange(0,π,2n+1)[2:2:end-1])
 
@@ -149,3 +150,145 @@ function polynomial()
     display(gcf())
 end
 
+"""
+    krylov_vectors(A,b,m) -> V
+
+Assemble a matrix `V` such that `V[:,k] = A^(k-1) * b`.
+"""
+function krylov_vectors(A,b,m)
+    n = length(b)
+    @assert size(A) == (n,n)
+
+    V = zeros(n,m)
+    for l = 1:m
+        V[:,l] = b
+        b = A*b
+    end
+    return V
+end
+
+function gmres_unstable(A,b,m)
+    V = krylov_vectors(A,b,m)
+    y = ((A*V) \ b)
+    return V * y
+end
+
+
+function gmres_convergence()
+    κ = 3
+    n = 100
+    m = 1:25
+    A = Diagonal(LinRange(1,κ,n))
+    x = ones(n)
+    errors = [begin
+        if (unstable = true)
+            x̃ = gmres_unstable(A,A*x,m)
+        else
+            x̃ = gmres(A,A*x, tol = 0, maxiter = m, restart = m)
+        end
+        norm(x̃ - x,2)
+    end for m in m]
+
+    clf()
+    semilogy(m, errors, "o-")
+    mm = 1:10
+    semilogy(mm, ((sqrt(κ)-1)/(sqrt(κ)+1)).^mm, "k--",
+        label=L"O\left(\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^m\right)")
+    xlabel(L"\mathrm{degree}(p)")
+    ylabel(L"\|p(A) \, b - A^{-1} b\|_2")
+    legend(frameon=false)
+    display(gcf())
+end
+
+function restarted_gmres_good()
+    n = 100
+    A = Diagonal(LinRange(1,10,n))
+    b = ones(n)
+
+    clf()
+    for (i,k) = enumerate((2,5,10,100))
+        _,log = gmres(A,b; log=true, restart = k)
+        semilogy(
+            1:log.iters,
+            log[:resnorm],
+            "C$(i-1)-"
+        )
+        semilogy(
+            1:k:log.iters,
+            log[:resnorm][1:k:end],
+            "C$(i-1)o",
+            ms = 4
+        )
+        semilogy(
+            [NaN], [NaN],
+            "C$(i-1)-o",
+            label="restart = $k",
+            ms = 4
+        )
+    end
+    xlabel(L"k")
+    ylabel(L"\|Ax_k - b\|_2")
+    legend(loc="best")
+    display(gcf())
+end
+
+function restarted_gmres_bad()
+    n = 100
+    A = Diagonal([0.1; LinRange(1,10,n-1)])
+    b = ones(n)
+
+    clf()
+    for (i,k) = enumerate((2,5,10,100))
+        _,log = gmres(A,b; log=true, restart = k)
+        semilogy(
+            1:log.iters,
+            log[:resnorm],
+            "C$(i-1)-"
+        )
+        semilogy(
+            1:k:log.iters,
+            log[:resnorm][1:k:end],
+            "C$(i-1)o",
+            ms = 4
+        )
+        semilogy(
+            [NaN], [NaN],
+            "C$(i-1)-o",
+            label="restart = $k",
+            ms = 4
+        )
+    end
+    xlabel(L"k")
+    ylabel(L"\|Ax_k - b\|_2")
+    legend(loc="best")
+    display(gcf())
+end
+
+
+
+function gmres_vs_minres()
+    if true
+        n = 200
+        Random.seed!(42)
+        A = rand(n,n)
+        A = A+A' + 12*I
+        b = rand(n)
+    else
+        n = 100
+        A = laplacian_2d(n)
+        b = rand(n^2)
+    end
+
+    clf()
+    for (label, log) = (
+        ("GMRES", gmres(A,b, log=true, restart=length(b))[2]),
+        ("MinRes", minres(A,b, log=true)[2]),
+        # ("GMRES(11)", gmres(A,b, log=true, restart=11)[2]),
+    )
+        semilogy(log[:resnorm], "-o", ms=2, label=label)
+    end
+    xlabel(L"m")
+    ylabel(L"\|A \, p(A) \, b - b\|_2")
+    legend(frameon=false)
+    display(gcf())
+end
