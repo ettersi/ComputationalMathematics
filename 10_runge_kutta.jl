@@ -18,7 +18,7 @@ function rk4_step(f,y0,t)
 end
 
 function integrate(f,y0,T,n,step)
-    y = Vector{float(typeof(y0))}(undef,n)
+    y = Vector{typeof(y0)}(undef,n)
     y[1] = y0
     for i = 2:n
         y[i] = step(f,y[i-1],T/(n-1))
@@ -29,7 +29,7 @@ end
 function example()
     f = y->[ y[2], -y[1] ]
     y0 = [ 1.0, 0.0 ]
-    n = 1000
+    n = 20
     t = LinRange(0,2π,n)
 
     clf()
