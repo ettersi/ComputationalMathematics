@@ -3,6 +3,7 @@ using LinearAlgebra
 using FFTW
 using IterativeSolvers
 using Random
+using SparseArrays
 
 chebyshev_points(n) = cos.(LinRange(0,π,2n+1)[2:2:end-1])
 
@@ -267,17 +268,11 @@ end
 
 
 function gmres_vs_minres()
-    if true
-        n = 200
-        Random.seed!(42)
-        A = rand(n,n)
-        A = A+A' + 12*I
-        b = rand(n)
-    else
-        n = 100
-        A = laplacian_2d(n)
-        b = rand(n^2)
-    end
+    n = 200
+    Random.seed!(42)
+    A = rand(n,n)
+    A = A+A' + 12*I
+    b = rand(n)
 
     clf()
     for (label, log) = (
@@ -286,6 +281,53 @@ function gmres_vs_minres()
         # ("GMRES(11)", gmres(A,b, log=true, restart=11)[2]),
     )
         semilogy(log[:resnorm], "-o", ms=2, label=label)
+    end
+    xlabel(L"m")
+    ylabel(L"\|A \, p(A) \, b - b\|_2")
+    legend(frameon=false)
+    display(gcf())
+end
+
+
+
+function laplacian_1d(n)
+    return (n+1)^2 * Tridiagonal(
+        fill( 1.0,n-1), # subdiagonal
+        fill(-2.0,n),   # diagonal
+        fill( 1.0,n-1)  # superdiagonal
+    )
+end
+
+function laplacian_2d(n)
+    Δ = sparse(laplacian_1d(n))
+    Id = sparse(I,n,n)
+    return kron(Id,Δ) + kron(Δ,Id)
+end
+
+function cg_poisson_1d()
+    clf()
+    for n = (500,1000,1500,2000)
+        Random.seed!(42)
+        A = -laplacian_1d(n)
+        b = rand(n)
+        r = cg(A,b, log = true, tol = eps())[2][:resnorm]
+        semilogy(0:length(r)-1, r, label=latexstring("n = $n"))
+    end
+    xlabel(L"m")
+    ylabel(L"\|A \, p(A) \, b - b\|_2")
+    legend(frameon=false)
+    display(gcf())
+end
+
+function cg_poisson_2d()
+    clf()
+    for n = (50,100,150,200)
+        Random.seed!(42)
+        κ = 4*(n+1)^2/π^2
+        A = -laplacian_2d(n)
+        b = rand(n^2)
+        r = cg(A,b, log = true, tol = eps())[2][:resnorm]
+        semilogy(0:length(r)-1, r, label=latexstring("n = $n"))
     end
     xlabel(L"m")
     ylabel(L"\|A \, p(A) \, b - b\|_2")
