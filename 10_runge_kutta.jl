@@ -1,23 +1,25 @@
 using PyPlot
+using LinearAlgebra
 
 function euler_step(f,y0,t)
     return y0 + f(y0)*t
 end
 
-function midpoint_step(f,y0,t)
-    ỹ = y0 + f(y0)*t/2
-    return y0 + f(ỹ)*t
+function trapezoidal_step(f,y0,t)
+    f1 = t*f(y0)
+    f2 = t*f(y0 + f1)
+    return y0 + (f1 + f2)/2
 end
 
 function rk4_step(f,y0,t)
-    f0 = t*f(y0)
-    f1 = t*f(y0 + f0/2)
+    f1 = t*f(y0)
     f2 = t*f(y0 + f1/2)
-    f3 = t*f(y0 + f2)
-    return y0 + f0/6 + f1/3 + f2/3 + f3/6
+    f3 = t*f(y0 + f2/2)
+    f4 = t*f(y0 + f3)
+    return y0 + f1/6 + f2/3 + f3/3 + f4/6
 end
 
-function integrate(f,y0,T,n,step)
+function propagate(f,y0,T,n,step)
     y = Vector{typeof(y0)}(undef,n)
     y[1] = y0
     for i = 2:n
@@ -37,10 +39,10 @@ function example()
     plot(tt, cos.(tt), "k", label="exact")
     for (name,step) in (
         ("Euler", euler_step),
-        # ("midpoint", midpoint_step),
+        # ("trapezoidal", trapezoidal_step),
         # ("RK4", rk4_step),
     )
-        ỹ = integrate(f,y0,t[end],n, step)
+        ỹ = propagate(f,y0,t[end],n, step)
         plot(t, [ỹ[i][1] for i = 1:n], label=name)
     end
     xlabel(L"t")
@@ -57,21 +59,20 @@ function convergence()
 
     clf()
     n = round.(Int, 10.0.^LinRange(0,3,30))
-    for (name,step) in (
-        ("Euler", euler_step),
-        # ("midpoint", midpoint_step),
-        # ("RK4", rk4_step),
-    )
+    for (i,(name,step,p)) in enumerate((
+        ("Euler", euler_step,1),
+        # ("trapezoidal", trapezoidal_step,2),
+        # ("RK4", rk4_step,4),
+    ))
         error = [begin
-            ỹ = integrate(f,y0,T,n, step)
+            ỹ = propagate(f,y0,T,n, step)
             abs(y(T) - ỹ[end])
         end for n in n]
         loglog(n, error, label=name)
+        nn = (1e1,1e3)
+        loglog(nn, inv.(nn).^p, "C$(i-1)--", label=latexstring("O(n^{-$p})"))
     end
-    loglog(n, inv.(n), "k--")
-    # loglog(n, inv.(n).^2, "k-.")
-    # loglog(n, inv.(n).^4, "k-.")
-    legend(loc="best")
+    legend(frameon=false)
     xlabel(L"n")
     ylabel(L"|\tilde y(T) - y(T)|")
     display(gcf())
@@ -89,7 +90,7 @@ function nsteps()
         n = 2
         while true
             n = round(Int, n*1.3)
-            ỹ = integrate(f,y0,T,n, euler_step)
+            ỹ = propagate(f,y0,T,n, euler_step)
             t = LinRange(0,T,n)
             if maximum(abs(y(t[i]) - ỹ[i]) for i = 1:n) < τ
                 break
@@ -103,5 +104,120 @@ function nsteps()
     # semilogy(T,n)
     xlabel(L"T")
     ylabel(L"$n$ required to achieve error tolerance")
+    display(gcf())
+end
+
+
+
+function embedded_ET_step(f,y0,t)
+    f1 = t*f(y0)
+    y_euler = y0 + f1
+    f2 = t*f(y_euler)
+    y_trapezoidal = y0 + (f1+f2)/2
+    return y_euler, y_trapezoidal
+    # Use `norm(y_euler - y_trapezoidal)` as an approximation to the local error.
+end
+
+function propagate_adaptively(f,y0,T,τ,step,p)
+    # p = order of consistency of step()[1]
+    t = Vector{Float64}()
+    y = Vector{typeof(y0)}()
+    push!(t, 0.0)
+    push!(y, y0)
+
+    n_rejected = 0
+    Δt = T
+    while t[end] < T
+        y1,y2 = step(f,y[end],Δt)
+        q = (τ/ norm(y1 - y2))^(1/p)
+        if q >= 1
+            push!(t,t[end]+Δt)
+            push!(y,y2)
+        else
+            n_rejected += 1
+        end
+        Δt = min(0.9*q*Δt, T-t[end])
+    end
+
+    return t,y, n_rejected
+end
+
+function adaptive_rk_example_1()
+    f = y->cos(y)^2
+    y0 = -1.56
+    T = 200
+    τ = 1e-3
+
+    t,y,n_rejected = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 2)
+
+    Δt = minimum(diff(t))
+    n_fixed = round(Int, T/Δt)
+    println("  # adaptive steps: ", length(t)-1)
+    println("# fixed-size steps: ", n_fixed)
+    println("             Ratio: ", round(n_fixed/(length(t)-1), sigdigits=3))
+    println("  # rejected steps: ", n_rejected)
+
+    clf()
+    plot(t, zero.(t), "ko", ms=3, label=L"t_k")
+    plot(t,y, "-", label=L"y(t)")
+    xlabel(L"t")
+    ylabel(L"y(t)")
+    legend(frameon=false)
+    display(gcf())
+end
+
+function adaptive_rk_example_2()
+    f = y->-y
+    y0 = 1.0
+    T = 50
+    τ = 1e-4
+
+    t,y = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 1)
+
+    clf()
+    plot(t, fill(0.5, length(t)), "ko", ms=3, label=L"t_k")
+    plot(t,y, label=L"y(t)")
+    xlabel(L"t")
+    ylabel(L"y(t)")
+    legend(frameon=false)
+    display(gcf())
+end
+
+function stepsize()
+    f = y->-y
+    y0 = 1.0
+    T = 50
+    τ = 1e-6
+
+    t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 1)
+
+    clf()
+    semilogy(t[2:end],diff(t))
+    if show_ref = false
+        semilogy([20,t[end]],[2,2], "k")
+    end
+    xlabel(L"t")
+    ylabel(L"t_k - t_{k-1}")
+    display(gcf())
+end
+
+function stability_example()
+    f = y->-y
+    y0 = 1.0
+    T = 10
+    step = euler_step
+    # step = trapezoidal_step
+
+    clf()
+    t = LinRange(0,T,1000)
+    plot(t, exp.(-t), "k", label=L"y(t)")
+    for Δt = 1.2:0.2:2.2
+        n = round(Int,T/Δt)
+        t = Δt.*(0:n)
+        y = propagate(f,y0,n*Δt,n+1,step)
+        plot(t,y, label=latexstring("\\Delta t = $Δt"))
+    end
+    xlabel(L"t")
+    legend(frameon=false, loc="center left", bbox_to_anchor=(1,0.5))
     display(gcf())
 end
