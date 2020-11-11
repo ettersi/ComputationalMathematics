@@ -1,11 +1,11 @@
 using PyPlot
 using Roots # Install by typing `] add Roots`
 
-function trapezoidal_step(f,y0,t)
+function simpson_step(f,y0,t)
     # TODO: Your code here!
 end
 
-function implicit_trapezoidal_step(f,y0,t)
+function implicit_simpson_step(f,y0,t)
     # TODO: Your code here!
 end
 
@@ -27,8 +27,8 @@ function convergence()
     clf()
     n = round.(Int, 10.0.^LinRange(1,3,30))
     for (name,step) in (
-        ("explicit", trapezoidal_step),
-        # ("implict", implicit_trapezoidal_step),
+        ("explicit", simpson_step),
+        # ("implict", implicit_simpson_step),
     )
         error = [begin
             ỹ = integrate(f,y0,T,n, step)
