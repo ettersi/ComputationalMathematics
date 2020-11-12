@@ -2,6 +2,7 @@
 AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 BernsteinEllipses = "55e0a05c-753f-11e9-14bb-b7f14aae7d87"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
