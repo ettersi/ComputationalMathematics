@@ -1,5 +1,6 @@
 using PyPlot
 using LinearAlgebra
+using Roots
 
 function euler_step(f,y0,t)
     return y0 + f(y0)*t
@@ -58,11 +59,13 @@ function convergence()
     y = t-> y0/(1-y0*t)
 
     clf()
-    n = round.(Int, 10.0.^LinRange(0,3,30))
+    n = round.(Int, 10.0.^LinRange(1,3,30))
     for (i,(name,step,p)) in enumerate((
         ("Euler", euler_step,1),
         # ("trapezoidal", trapezoidal_step,2),
         # ("RK4", rk4_step,4),
+        # ("implicit Euler", implicit_euler_step,1),
+        # ("implicit trapezoidal", implicit_trapezoidal_step,2),
     ))
         error = [begin
             ỹ = propagate(f,y0,T,n, step)
@@ -129,7 +132,7 @@ function propagate_adaptively(f,y0,T,τ,step,p)
     Δt = T
     while t[end] < T
         y1,y2 = step(f,y[end],Δt)
-        q = (τ/ norm(y1 - y2))^(1/p)
+        q = (τ / norm(y1 - y2))^(1/p)
         if q >= 1
             push!(t,t[end]+Δt)
             push!(y,y2)
@@ -161,7 +164,6 @@ function adaptive_rk_example_1()
     plot(t, zero.(t), "ko", ms=3, label=L"t_k")
     plot(t,y, "-", label=L"y(t)")
     xlabel(L"t")
-    ylabel(L"y(t)")
     legend(frameon=false)
     display(gcf())
 end
@@ -172,13 +174,20 @@ function adaptive_rk_example_2()
     T = 50
     τ = 1e-4
 
-    t,y = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 1)
+    if (explicit = true)
+        t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 2)
+    else
+        t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_implicit_ET_step, 2)
+    end
 
     clf()
     plot(t, fill(0.5, length(t)), "ko", ms=3, label=L"t_k")
-    plot(t,y, label=L"y(t)")
+    if (logy = false)
+        semilogy(t,abs.(y), label=L"|y(t)|")
+    else
+        plot(t,y, label=L"y(t)")
+    end
     xlabel(L"t")
-    ylabel(L"y(t)")
     legend(frameon=false)
     display(gcf())
 end
@@ -189,29 +198,66 @@ function stepsize()
     T = 50
     τ = 1e-6
 
-    t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 1)
+    if (explicit = true)
+        t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_ET_step, 2)
+    else
+        t,y,_ = propagate_adaptively(f,y0,T,τ, embedded_implicit_ET_step, 2)
+    end
 
     clf()
-    semilogy(t[2:end],diff(t))
-    if show_ref = false
-        semilogy([20,t[end]],[2,2], "k")
+    if (show_ref = false)
+        semilogy([t[1],t[end]],[2,2], "k", lw=0.5)
     end
+    semilogy(t[2:end],diff(t))
     xlabel(L"t")
     ylabel(L"t_k - t_{k-1}")
     display(gcf())
 end
 
+function implicit_euler_step(f,y0,t)
+    return find_zero(
+        y -> y0 + f(y)*t - y,
+        euler_step(f,y0,t))
+end
+
+function implicit_trapezoidal_step(f,y0,t)
+    f1 = t*f(y0)
+    return find_zero(
+        y -> y0 + (f1 + f(y)*t)/2 - y,
+        trapezoidal_step(f,y0,t)
+    )
+end
+
+function embedded_implicit_ET_step(f,y0,t)
+    f1 = t*f(y0)
+    y_trapezoidal = find_zero(
+        y -> y0 + (f1 + f(y)*t)/2 - y,
+        trapezoidal_step(f,y0,t)
+    )
+    y_quasi_euler = y0 + f(y_trapezoidal)*t
+    return y_quasi_euler, y_trapezoidal
+end
+
+
 function stability_example()
     f = y->-y
     y0 = 1.0
-    T = 10
-    step = euler_step
-    # step = trapezoidal_step
+    if (explicit = true)
+        T = 10
+        Δt = 1.2:0.2:2.2
+        step = euler_step
+        # step = trapezoidal_step
+    else
+        T = 50
+        Δt = 1:5
+        step = implicit_euler_step
+        # step = implicit_trapezoidal_step
+    end
 
     clf()
     t = LinRange(0,T,1000)
     plot(t, exp.(-t), "k", label=L"y(t)")
-    for Δt = 1.2:0.2:2.2
+    for Δt = Δt
         n = round(Int,T/Δt)
         t = Δt.*(0:n)
         y = propagate(f,y0,n*Δt,n+1,step)
