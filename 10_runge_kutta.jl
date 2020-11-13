@@ -217,7 +217,8 @@ end
 function implicit_euler_step(f,y0,t)
     return find_zero(
         y -> y0 + f(y)*t - y,
-        euler_step(f,y0,t))
+        euler_step(f,y0,t)
+    )
 end
 
 function implicit_trapezoidal_step(f,y0,t)
